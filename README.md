@@ -4,31 +4,6 @@
 ## 📣 Latest News
 - **05/01/2025**: 🎉 **Our new framework WebThinker is available**, which empowers reasoning models with **deep research** capability. You can access the [Github Repo](https://github.com/RUC-NLPIR/WebThinker) and the [Paper](https://arxiv.org/abs/2504.21776).
 
-## 💡 Overview
-
-Large Reasoning Models (LRMs) like OpenAI's o1 have showcased remarkable long stepwise reasoning capabilities through large-scale reinforcement learning. Despite their strengths, these models often encounter knowledge insufficiencies during prolonged reasoning processes, resulting in frequent uncertainties and potential errors, as shown in the following figure.
-
-<p align="center">
-  <img src="figures/uncertainty.jpg" width="95%" />
-</p>
-
-### ✨ Method
-
-To overcome these challenges, we present **Search-o1**, a framework that augments LRMs with an **agentic Retrieval-Augmented Generation (RAG)** mechanism and a **Reason-in-Documents** module for deep analysis and integration of retrieved documents into the reasoning chain.
-- **Agentic Search Workflow**: Integrates an agentic search process into the reasoning workflow, allowing models itself to dynamically retrieve external knowledge whenever they encounter uncertain information.
-- **Reason-in-Documents Module**: Seamlessly integrates the retrieved information, reducing noise and maintaining a coherent reasoning chain.
-
-![Model Comparison](figures/compare.png)
-
-
-### ✨ Inference Process
-
-Search-o1 incorporates a batch generation mechanism with interleaved search. We initialize reasoning sequences by combining task instructions with input questions. It simultaneously generates tokens for all sequences, detecting search queries to retrieve relevant documents in batches. These documents are then refined and seamlessly integrated back into the reasoning chains, iterating this process until all sequences are completed and final answers are produced.
-
-![Inference](figures/algorithm.png)
-
-This approach enhances the reliability and accuracy of LRMs, enabling them to handle complex reasoning tasks more effectively by addressing knowledge gaps in real-time.
-
 
 ## 🔧 Installation
 
