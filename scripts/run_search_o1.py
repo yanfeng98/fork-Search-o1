@@ -3,8 +3,6 @@ import os
 import json
 import time
 import re
-from tqdm import tqdm
-import numpy as np
 import torch
 import string
 from typing import Optional, Tuple, List, Dict
@@ -14,26 +12,26 @@ from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
 
 from bing_search import (
-    bing_web_search, 
-    extract_relevant_info, 
-    fetch_page_content, 
+    bing_web_search,
+    extract_relevant_info,
+    fetch_page_content,
     extract_snippet_with_context
 )
 from evaluate import (
-    run_evaluation, 
+    run_evaluation,
     extract_answer
 )
 from prompts import (
-    get_gpqa_search_o1_instruction, 
-    get_math_search_o1_instruction, 
-    get_code_search_o1_instruction, 
-    get_singleqa_search_o1_instruction, 
-    get_multiqa_search_o1_instruction, 
+    get_gpqa_search_o1_instruction,
+    get_math_search_o1_instruction,
+    get_code_search_o1_instruction,
+    get_singleqa_search_o1_instruction,
+    get_multiqa_search_o1_instruction,
     get_webpage_to_reasonchain_instruction,
-    get_task_instruction_openqa, 
-    get_task_instruction_math, 
-    get_task_instruction_multi_choice, 
-    get_task_instruction_code, 
+    get_task_instruction_openqa,
+    get_task_instruction_math,
+    get_task_instruction_multi_choice,
+    get_task_instruction_code,
 )
 
 # Define special tokens
@@ -194,7 +192,7 @@ def main():
     bing_endpoint = args.bing_endpoint
     use_jina = args.use_jina
     jina_api_key = args.jina_api_key
-    
+
     # Adjust parameters based on dataset
     if dataset_name in ['nq', 'triviaqa', 'hotpotqa', 'musique', 'bamboogle', '2wiki', 'medmcqa', 'pubhealth']:
         MAX_SEARCH_LIMIT = 5
@@ -203,7 +201,7 @@ def main():
             MAX_TURN = 15
         top_k = 10
         max_doc_len = 3000
-    
+
     if args.jina_api_key == 'None':
         jina_api_key = None
 
@@ -456,11 +454,11 @@ def main():
                 else:
                     if current_step_num is not None:
                         current_content.append(line)
-            
+
             # Save the last step if any
             if current_step_num is not None:
                 steps[current_step_num] = "\n".join(current_content).strip()
-            
+
             return steps
 
         # Parse the original and replacement steps
@@ -636,7 +634,7 @@ def main():
                 for i, doc_info in enumerate(relevant_info):
                     url = doc_info['url']
                     raw_context = url_cache.get(url, "")
-                    doc_info['snippet'] = doc_info['snippet'].replace('<b>','').replace('</b>','')            
+                    doc_info['snippet'] = doc_info['snippet'].replace('<b>','').replace('</b>','')
                     success, filtered_context = extract_snippet_with_context(raw_context, doc_info['snippet'], context_chars=max_doc_len)
                     if success:
                         context = filtered_context
@@ -646,7 +644,7 @@ def main():
                     doc_info['context'] = context
                     formatted_documents += f"**Web Page {i + 1}:**\n"
                     formatted_documents += json.dumps(doc_info, ensure_ascii=False, indent=2) + "\n"
-                    
+
                 batch_documents.append(formatted_documents)
 
             # After fetching, prepare for batch processing if there are any
