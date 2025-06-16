@@ -56,7 +56,7 @@ def _fix_sqrt(string):
     if "\\sqrt" not in string:
         return string
     splits = string.split("\\sqrt")
-    new_string = splits[0] 
+    new_string = splits[0]
     for split in splits[1:]:
         if split[0] != "{":
             a = split[0]
@@ -67,7 +67,7 @@ def _fix_sqrt(string):
     return new_string
 
 def _strip_string(string):
-    # linebreaks  
+    # linebreaks
     string = string.replace("\n", "")
     #print(string)
 
@@ -88,14 +88,14 @@ def _strip_string(string):
     string = string.replace("\\left", "")
     string = string.replace("\\right", "")
     #print(string)
-    
+
     # Remove circ (degrees)
     string = string.replace("^{\\circ}", "")
     string = string.replace("^\\circ", "")
 
     # remove dollar signs
     string = string.replace("\\$", "")
-    
+
     # remove units (on the right)
     string = _remove_right_units(string)
 
@@ -135,7 +135,7 @@ def _strip_string(string):
 
     return string
 
-def is_equiv(str1, str2, verbose=False):
+def is_equiv(str1: str, str2: str, verbose: bool = False) -> bool:
     if str1 is None and str2 is None:
         print("WARNING: Both None")
         return True
@@ -143,8 +143,8 @@ def is_equiv(str1, str2, verbose=False):
         return False
 
     try:
-        ss1 = _strip_string(str1)
-        ss2 = _strip_string(str2)
+        ss1: str = _strip_string(str1)
+        ss2: str = _strip_string(str2)
         if verbose:
             print(ss1, ss2)
         return ss1 == ss2

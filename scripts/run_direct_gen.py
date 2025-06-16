@@ -1,7 +1,11 @@
 import json
 import torch
 import os, time
-from vllm import LLM, SamplingParams
+from vllm import (
+    LLM,
+    SamplingParams,
+    RequestOutput
+)
 from transformers import AutoTokenizer
 from evaluate import run_evaluation
 from prompts import (
@@ -85,15 +89,15 @@ def parse_args():
 def main():
     args = parse_args()
 
-    dataset_name = args.dataset_name
-    split = args.split
-    subset_num = args.subset_num
-    model_path = args.model_path
-    temperature = args.temperature
-    top_p = args.top_p
-    top_k = args.top_k
-    repetition_penalty = args.repetition_penalty
-    max_tokens = args.max_tokens
+    dataset_name: str = args.dataset_name
+    split: str = args.split
+    subset_num: int = args.subset_num
+    model_path: str = args.model_path
+    temperature: float = args.temperature
+    top_p: float = args.top_p
+    top_k: int = args.top_k
+    repetition_penalty: float = args.repetition_penalty
+    max_tokens: int = args.max_tokens
 
     # Set default repetition_penalty if not provided
     if repetition_penalty is None:
@@ -101,50 +105,50 @@ def main():
 
     # Paths to datasets
     if dataset_name == 'math500':
-        data_path = f'./data/MATH500/{split}.json'
+        data_path: str = f'./data/MATH500/{split}.json'
     elif dataset_name == 'gpqa':
-        data_path = f'./data/GPQA/{split}.json'
+        data_path: str = f'./data/GPQA/{split}.json'
     elif dataset_name == 'aime':
-        data_path = f'./data/AIME/{split}.json'
+        data_path: str = f'./data/AIME/{split}.json'
     elif dataset_name == 'amc':
-        data_path = f'./data/AMC/{split}.json'
+        data_path: str = f'./data/AMC/{split}.json'
     elif dataset_name == 'livecode':
-        data_path = f'./data/LiveCodeBench/{split}.json'
+        data_path: str = f'./data/LiveCodeBench/{split}.json'
     elif dataset_name in ['nq', 'triviaqa', 'hotpotqa', 'musique', 'bamboogle', '2wiki', 'medmcqa', 'pubhealth']:
-        data_path = f'./data/QA_Datasets/{dataset_name}.json'
+        data_path: str = f'./data/QA_Datasets/{dataset_name}.json'
     else:
         raise ValueError(f"Unsupported dataset_name: {dataset_name}")
 
     # Load the model
-    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+    tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = 'left'
 
     if 'qwq' in model_path.lower():
-        model_short_name = 'qwq'
+        model_short_name: str = 'qwq'
     elif 'deepseek' in model_path.lower():
         if 'llama-8b' in model_path.lower():
-            model_short_name = 'ds-llama-8b'
+            model_short_name: str = 'ds-llama-8b'
         elif 'qwen-7b' in model_path.lower():
-            model_short_name = 'ds-qwen-7b'
+            model_short_name: str = 'ds-qwen-7b'
         elif 'qwen-32b' in model_path.lower():
-            model_short_name = 'ds-qwen-32b'
+            model_short_name: str = 'ds-qwen-32b'
     elif 'sky-t1' in model_path.lower():
-        model_short_name = 'sky-t1'
+        model_short_name: str = 'sky-t1'
     else:
-        model_short_name = model_path.split('/')[-1].lower().replace('-instruct', '')
+        model_short_name: str = model_path.split('/')[-1].lower().replace('-instruct', '')
 
     if model_short_name in ['qwq', 'ds-llama-8b', 'ds-qwen-7b', 'ds-qwen-32b', 'sky-t1']:
         if dataset_name in ['math500', 'gpqa', 'aime', 'amc', 'livecode']:
-            output_dir = f'./outputs/{dataset_name}.{model_short_name}.direct'
+            output_dir: str = f'./outputs/{dataset_name}.{model_short_name}.direct'
         else:
-            output_dir = f'./outputs/runs.qa/{dataset_name}.{model_short_name}.direct'
+            output_dir: str = f'./outputs/runs.qa/{dataset_name}.{model_short_name}.direct'
     else:
-        output_dir = f'./outputs/runs.baselines/{dataset_name}.{model_short_name}.direct'
+        output_dir: str = f'./outputs/runs.baselines/{dataset_name}.{model_short_name}.direct'
     os.makedirs(output_dir, exist_ok=True)
 
-    llm = LLM(
+    llm: LLM = LLM(
         model=model_path,
         tensor_parallel_size=torch.cuda.device_count(),
         gpu_memory_utilization=0.95,
@@ -152,12 +156,12 @@ def main():
 
     # Load data
     with open(data_path, mode='r', encoding='utf-8') as json_file:
-        filtered_data = json.load(json_file)
+        filtered_data: list[dict[str, int|str]] = json.load(json_file)
 
     # prepare input
-    input_list = []
+    input_list: list[str] = []
     for item in filtered_data:
-        question = item['Question']
+        question: str = item['Question']
         if dataset_name in ['nq', 'triviaqa', 'hotpotqa', 'musique', 'bamboogle', '2wiki']:
             if 'qwq' in model_path.lower() or 'deepseek' in model_path.lower() or 'sky-t1' in model_path.lower():
                 user_prompt = get_task_instruction_openqa(question, model_name='qwq')
@@ -172,11 +176,11 @@ def main():
 
         elif dataset_name in ['gpqa']:
             if 'qwq' in model_path.lower() or 'deepseek' in model_path.lower() or 'sky-t1' in model_path.lower():
-                user_prompt = get_task_instruction_multi_choice(question, model_name='qwq')
+                user_prompt: str = get_task_instruction_multi_choice(question, model_name='qwq')
             elif 'llama' in model_path.lower():
-                user_prompt = get_task_instruction_multi_choice(question, model_name='llama')
+                user_prompt: str = get_task_instruction_multi_choice(question, model_name='llama')
             else:
-                user_prompt = get_task_instruction_multi_choice(question)
+                user_prompt: str = get_task_instruction_multi_choice(question)
 
         elif dataset_name == 'livecode':
             question_title = item.get('question_title', '')
@@ -186,8 +190,8 @@ def main():
                 user_prompt = get_task_instruction_code(question)
         else:
             user_prompt = ""  # Default to empty if dataset not matched
-        prompt = [{"role": "user", "content": user_prompt}]
-        prompt = tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
+        prompt: list[dict[str, str]] = [{"role": "user", "content": user_prompt}]
+        prompt: str = tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
         input_list.append(prompt)
 
     if subset_num != -1:
@@ -206,7 +210,7 @@ def main():
 
     t_start = time.time()
     # Generate model outputs
-    output_list = llm.generate(
+    output_list: list[RequestOutput] = llm.generate(
         input_list,
         sampling_params=SamplingParams(
             max_tokens=max_tokens,
@@ -216,7 +220,7 @@ def main():
             repetition_penalty=repetition_penalty,
         )
     )
-    total_time = time.time() - t_start
+    total_time: float = time.time() - t_start
 
     # Run evaluation
     run_evaluation(

@@ -94,13 +94,13 @@ You are tasked with reading and analyzing web pages based on the following input
 No helpful information found.
 
 **Inputs:**
-- **Previous Reasoning Steps:**  
+- **Previous Reasoning Steps:**
 {prev_reasoning}
 
-- **Current Search Query:**  
+- **Current Search Query:**
 {search_query}
 
-- **Searched Web Pages:**  
+- **Searched Web Pages:**
 {document}
 
 Now you should analyze each web page and find helpful information based on the current search query "{search_query}" and previous reasoning steps.
@@ -154,7 +154,7 @@ def get_multiqa_search_o1_instruction(MAX_SEARCH_LIMIT):
         "- When done searching, continue your reasoning.\n\n"
     )
 
-    
+
 def get_singleqa_rag_agent_instruction(MAX_SEARCH_LIMIT, MAX_URL_FETCH):
     return (
         "You are a reasoning assistant with the ability to perform web searches and retrieve webpage content to help "
@@ -226,7 +226,7 @@ def get_multiqa_rag_agent_instruction(MAX_SEARCH_LIMIT, MAX_URL_FETCH):
         "<|begin_search_result|> ...search results without full page... <|end_search_result|>\n\n"
         "Assistant thinks: The search results mention the company that developed the video game featuring Alice David as Lara Croft.\n\n"
         "Assistant:\n"
-        "<|begin_url|>http://example.com/lara_croft_voice_actor.html, http://example.com/game_developer.html<|end_url|>\n\n" 
+        "<|begin_url|>http://example.com/lara_croft_voice_actor.html, http://example.com/game_developer.html<|end_url|>\n\n"
         "(System returns full page content)\n\n"
         "Assistant:\n"
         "<|begin_full_page|> ...full page content... <|end_full_page|>\n\n"
@@ -261,7 +261,7 @@ def get_gpqa_rag_agent_instruction(MAX_SEARCH_LIMIT, MAX_URL_FETCH):
         "<|begin_search_result|> ...search results without full page... <|end_search_result|>\n\n"
         "Assistant thinks: The search results mention some URLs. I want full details from one of them.\n\n"
         "Assistant:\n"
-        "<|begin_url|>http://example.com/ppIII_neutrino.html<|end_url|>\n\n" 
+        "<|begin_url|>http://example.com/ppIII_neutrino.html<|end_url|>\n\n"
         "(System returns full page content)\n\n"
         "Assistant:\n"
         "<|begin_full_page|> ...full page content... <|end_full_page|>\n\n"
@@ -296,7 +296,7 @@ def get_math_rag_agent_instruction(MAX_SEARCH_LIMIT, MAX_URL_FETCH):
         "<|begin_search_result|> ...search results without full page... <|end_search_result|>\n\n"
         "Assistant thinks: The search results mention some URLs. I want full details from one of them.\n\n"
         "Assistant:\n"
-        "<|begin_url|>http://example.com/integration_e_x_squared.html<|end_url|>\n\n" 
+        "<|begin_url|>http://example.com/integration_e_x_squared.html<|end_url|>\n\n"
         "(System returns full page content)\n\n"
         "Assistant:\n"
         "<|begin_full_page|> ...full page content... <|end_full_page|>\n\n"
@@ -331,7 +331,7 @@ def get_code_rag_agent_instruction(MAX_SEARCH_LIMIT, MAX_URL_FETCH):
         "<|begin_search_result|> ...search results without full page... <|end_search_result|>\n\n"
         "Assistant thinks: The search results mention some URLs. I want full details from one of them.\n\n"
         "Assistant:\n"
-        "<|begin_url|>http://example.com/python_binary_search.html<|end_url|>\n\n" 
+        "<|begin_url|>http://example.com/python_binary_search.html<|end_url|>\n\n"
         "(System returns full page content)\n\n"
         "Assistant:\n"
         "<|begin_full_page|> ...full page content... <|end_full_page|>\n\n"
@@ -384,21 +384,21 @@ def get_task_instruction_math(question, model_name=None):
         )
     return user_prompt
 
-def get_task_instruction_multi_choice(question, model_name=None):
+def get_task_instruction_multi_choice(question: str, model_name: str = None) -> str:
     if model_name == 'qwq':
-        user_prompt = (
+        user_prompt: str = (
             'Please answer the following multiple-choice question. '
             'You should provide your final choice in the format \\boxed{YOUR_CHOICE}.\n\n'
             f'Question:\n{question}\n\n'
         )
     elif model_name == 'llama':
-        user_prompt = (
+        user_prompt: str = (
             'Please answer the following multiple-choice question. You should think step by step to solve it.\n\n'
             'Provide your final choice in the format \\boxed{YOUR_CHOICE}. Your final choice should be one of the letters A, B, C, or D, DO NOT include any answer content.\n\n'
             f'Question:\n{question}\n\n'
         )
     else:
-        user_prompt = (
+        user_prompt: str = (
             'Please answer the following multiple-choice question. You should think step by step to solve it.\n\n'
             'Provide your final choice in the format \\boxed{YOUR_CHOICE}.\n\n'
             f'Question:\n{question}\n\n'

@@ -4,13 +4,14 @@ import numpy as np
 from collections import Counter
 import string
 import os, time
+from typing import Any
 from collections import defaultdict
 from lcb_runner.evaluation import codegen_metrics
 from utils.math_equivalence import is_equiv
 
 
 def extract_answer(output, mode='gen'):
-    extracted_text = ''
+    extracted_text: str = ''
     if mode == 'codegen':
         # Extract the code between ```python and ```
         pattern = r'```python\s*(.*?)\s*```'
@@ -43,9 +44,9 @@ def extract_answer(output, mode='gen'):
     return extracted_text
 
 
-def normalize_answer(text):
-    text = text.lower()
-    text = " ".join(text.strip().split())
+def normalize_answer(text: str) -> str:
+    text: str = text.lower()
+    text: str = " ".join(text.strip().split())
     return text
 
 def normalize_answer_qa(s):
@@ -61,9 +62,9 @@ def normalize_answer_qa(s):
     return white_space_fix(remove_articles(remove_punc(lower(s))))
 
 
-def evaluate_predictions(output, labeled_answer, mode='gen'):
-    final_metric = {"is_valid_answer": False, "acc": 0, "em": 0, "f1": 0, 'math_equal': 0}
-    pred_answer = extract_answer(output, mode=mode)
+def evaluate_predictions(output: str, labeled_answer: str, mode: str = 'gen') -> tuple[dict[str, bool|int|float], str]:
+    final_metric: dict[str, bool|int|float] = {"is_valid_answer": False, "acc": 0, "em": 0, "f1": 0, 'math_equal': 0}
+    pred_answer: str = extract_answer(output, mode=mode)
     if pred_answer != '':
         final_metric["is_valid_answer"] = True
 
@@ -87,25 +88,25 @@ def evaluate_predictions(output, labeled_answer, mode='gen'):
                 final_metric[k] = max(eval(k), final_metric[k])
 
     else:
-        normalized_pred_answer = normalize_answer(pred_answer)
-        normalized_ground_truth = normalize_answer(labeled_answer)
+        normalized_pred_answer: str = normalize_answer(pred_answer)
+        normalized_ground_truth: str = normalize_answer(labeled_answer)
 
-        em = int(normalized_pred_answer == normalized_ground_truth)
-        acc = int(normalized_ground_truth in normalized_pred_answer)
-    
-        prediction_tokens = normalized_pred_answer.split()
-        ground_truth_tokens = normalized_ground_truth.split()
+        em: int = int(normalized_pred_answer == normalized_ground_truth)
+        acc: int = int(normalized_ground_truth in normalized_pred_answer)
+
+        prediction_tokens: list[str] = normalized_pred_answer.split()
+        ground_truth_tokens: list[str] = normalized_ground_truth.split()
         common = Counter(prediction_tokens) & Counter(ground_truth_tokens)
-        num_same = sum(common.values())
+        num_same: int = sum(common.values())
         if num_same == 0:
-            f1 = 0
+            f1: float = 0
         else:
-            precision = 1.0 * num_same / len(prediction_tokens) if len(prediction_tokens) > 0 else 0
-            recall = 1.0 * num_same / len(ground_truth_tokens) if len(ground_truth_tokens) > 0 else 0
+            precision: float = 1.0 * num_same / len(prediction_tokens) if len(prediction_tokens) > 0 else 0
+            recall: float = 1.0 * num_same / len(ground_truth_tokens) if len(ground_truth_tokens) > 0 else 0
             if (precision + recall) == 0:
                 f1 = 0
             else:
-                f1 = (2 * precision * recall) / (precision + recall)
+                f1: float = (2 * precision * recall) / (precision + recall)
 
         final_metric["em"] = em
         final_metric["acc"] = acc
@@ -219,7 +220,7 @@ def run_evaluation(filtered_data, input_list, output_list, dataset_name, output_
     else:
         # Existing evaluation for other datasets
         avg_em, avg_acc, avg_f1, avg_math = [], [], [], []
-        num_valid_answer = 0
+        num_valid_answer: int = 0
 
         # If the dataset is GPQA, track metrics per domain
         domain_metrics = {}
@@ -230,9 +231,8 @@ def run_evaluation(filtered_data, input_list, output_list, dataset_name, output_
             else:
                 item['Output'] = result.outputs[0].text
             if dataset_name in ['gpqa', 'medmcqa']:
-                labeled_answer = item["Correct Choice"]
-                # labeled_choice_answer = item["Correct Answer"]
-                mode = 'choose'
+                labeled_answer: str = item["Correct Choice"]
+                mode: str = 'choose'
             elif dataset_name in ['math500', 'aime', 'amc']:
                 labeled_answer = item["answer"]
                 mode = 'gen'
@@ -263,7 +263,7 @@ def run_evaluation(filtered_data, input_list, output_list, dataset_name, output_
 
             # If the dataset is GPQA, attempt to track metrics per domain
             if dataset_name == 'gpqa':
-                domain = item.get("High-level domain", "Unknown")
+                domain: str = item.get("High-level domain", "Unknown")
                 if domain not in domain_metrics:
                     domain_metrics[domain] = {'em': [], 'acc': [], 'f1': [], 'math_equal': [], 'num_valid_answer': 0, 'total_num': 0}
                 domain_metrics[domain]['total_num'] += 1
@@ -274,12 +274,8 @@ def run_evaluation(filtered_data, input_list, output_list, dataset_name, output_
                 if my_method_valid:
                     domain_metrics[domain]['num_valid_answer'] += 1
 
-        t = time.localtime()
-        result_json_name = f'{split}.{t.tm_mon}.{t.tm_mday},{t.tm_hour}:{t.tm_min}.json'
-        metrics_json_name = f'{split}.{t.tm_mon}.{t.tm_mday},{t.tm_hour}:{t.tm_min}.metrics.json'
-
         # Compute overall metrics
-        overall_results = {
+        overall_results: dict[str, float|str] = {
             'em': np.mean(avg_em) if len(avg_em) > 0 else 0.0,
             'acc': np.mean(avg_acc) if len(avg_acc) > 0 else 0.0,
             'f1': np.mean(avg_f1) if len(avg_f1) > 0 else 0.0,
@@ -289,7 +285,7 @@ def run_evaluation(filtered_data, input_list, output_list, dataset_name, output_
         }
 
         # If the dataset is GPQA, output average metrics per domain
-        domain_avg_metrics = {}
+        domain_avg_metrics: dict[str, dict[str, float|str]] = {}
         if dataset_name == 'gpqa':
             for dm, m in domain_metrics.items():
                 domain_avg_metrics[dm] = {
@@ -301,13 +297,13 @@ def run_evaluation(filtered_data, input_list, output_list, dataset_name, output_
                 }
 
         # 保存总体和分domain的指标
-        final_metrics = {'overall': overall_results}
+        final_metrics: dict[str, dict[str, Any]] = {'overall': overall_results}
         if dataset_name == 'gpqa':
             final_metrics['per_domain'] = domain_avg_metrics
 
     t = time.localtime()
-    result_json_name = f'{split}.{t.tm_mon}.{t.tm_mday},{t.tm_hour}:{t.tm_min}.json'
-    metrics_json_name = f'{split}.{t.tm_mon}.{t.tm_mday},{t.tm_hour}:{t.tm_min}.metrics.json'
+    result_json_name: str = f'{split}.{t.tm_mon}.{t.tm_mday},{t.tm_hour}:{t.tm_min}.json'
+    metrics_json_name: str = f'{split}.{t.tm_mon}.{t.tm_mday},{t.tm_hour}:{t.tm_min}.metrics.json'
     if apply_backoff:
         result_json_name = output_dir
         metrics_json_name = output_dir.replace('.json', '.metrics.backoff.json')
@@ -466,7 +462,7 @@ if __name__ == "__main__":
             output = item['Output']
 
             metric, pred_answer = evaluate_predictions(
-                output=output, 
+                output=output,
                 labeled_answer=labeled_answer,
                 mode=mode,
             )
@@ -498,7 +494,7 @@ if __name__ == "__main__":
                 normal_output = normal_item['Output']
 
                 normal_metric, normal_pred_answer = evaluate_predictions(
-                    output=normal_output, 
+                    output=normal_output,
                     labeled_answer=normal_labeled_answer,
                     mode=normal_mode,
                 )
@@ -514,7 +510,7 @@ if __name__ == "__main__":
             if domain not in domain_metrics:
                 domain_metrics[domain] = {'em': [], 'acc': [], 'f1': [], 'math_equal': [], 'num_valid_answer': 0, 'total_num': 0}
             domain_metrics[domain]['total_num'] += 1
-                
+
             avg_em.append(metric['em'])
             avg_acc.append(metric['acc'])
             avg_f1.append(metric['f1'])
@@ -530,10 +526,10 @@ if __name__ == "__main__":
 
         # Compute overall metrics
         overall_metrics = {
-            'em': np.mean(avg_em) if len(avg_em) > 0 else 0, 
-            'acc': np.mean(avg_acc) if len(avg_acc) > 0 else 0, 
-            'f1': np.mean(avg_f1) if len(avg_f1) > 0 else 0, 
-            'math_equal': np.mean(avg_math) if len(avg_math) > 0 else 0, 
+            'em': np.mean(avg_em) if len(avg_em) > 0 else 0,
+            'acc': np.mean(avg_acc) if len(avg_acc) > 0 else 0,
+            'f1': np.mean(avg_f1) if len(avg_f1) > 0 else 0,
+            'math_equal': np.mean(avg_math) if len(avg_math) > 0 else 0,
             'num_valid_answer': f'{num_valid_answer} of {len(data)}',
             'query_latency': query_latency,
         }
