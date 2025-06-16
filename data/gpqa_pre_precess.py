@@ -1,18 +1,19 @@
 """Data preprocess for GPQA
 Data Link: https://huggingface.co/datasets/Idavidrein/gpqa
 """
+
 import csv
 import json
 import random
 from tqdm import tqdm
 
 # Paths to data
-split = 'diamond'  # diamond, main, extended
-data_path = f'./GPQA/original_data/gpqa_{split}.csv'
-output_path = f'./GPQA/{split}.json'
+split: str = 'diamond'  # diamond, main, extended
+data_path: str = f'./GPQA/original_data/gpqa_{split}.csv'
+output_path: str = f'./GPQA/{split}.json'
 
 # Define the keys we want to keep
-keys_to_keep = [
+keys_to_keep: list[str] = [
     'id',
     'Question',
     'Subdomain',
@@ -23,17 +24,17 @@ keys_to_keep = [
     'Incorrect Answer 3'
 ]
 
-filtered_data = []
+filtered_data: list[dict[str, int| str]] = []
 with open(data_path, mode='r', encoding='utf-8') as csv_file:
     csv_reader = csv.DictReader(csv_file)
     for idx, row in enumerate(tqdm(csv_reader), 0):
         # Add id field
         row['id'] = idx
         # Create new dictionary with only desired keys
-        filtered_row = {key: row[key] for key in keys_to_keep}
+        filtered_row: dict[str, int|str] = {key: row[key] for key in keys_to_keep}
 
         # Extract answers and shuffle them
-        answers = [
+        answers: list[tuple[str, str]] = [
             ('Correct Answer', filtered_row['Correct Answer']),
             ('Incorrect Answer 1', filtered_row['Incorrect Answer 1']),
             ('Incorrect Answer 2', filtered_row['Incorrect Answer 2']),
@@ -42,17 +43,17 @@ with open(data_path, mode='r', encoding='utf-8') as csv_file:
         random.shuffle(answers)
 
         # Assign new choices A, B, C, D in order and determine the correct choice
-        choices = ['A', 'B', 'C', 'D']
-        formatted_answers = []
-        correct_choice = None
+        choices: list[str] = ['A', 'B', 'C', 'D']
+        formatted_answers: list[tuple[str, str]] = []
+        correct_choice: str = None
         for i, (label, answer) in enumerate(answers):
-            choice = choices[i]
+            choice: str = choices[i]
             formatted_answers.append((choice, answer))
             if label == 'Correct Answer':
                 correct_choice = choice
 
         # Update the Question field
-        formatted_choices = "\n".join([f"({choice}) {answer}" for choice, answer in formatted_answers])
+        formatted_choices: str = "\n".join([f"({choice}) {answer}" for choice, answer in formatted_answers])
         filtered_row['Question'] = f"{filtered_row['Question']} Choices:\n{formatted_choices}\n"
 
         # Add the Correct Choice field
