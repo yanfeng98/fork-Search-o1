@@ -14,7 +14,6 @@ conda create -n search_o1 python=3.9
 conda activate search_o1
 
 # Install requirements
-cd Search-o1
 pip install -r requirements.txt
 ```
 
@@ -24,7 +23,7 @@ pip install -r requirements.txt
 
 Use the code provided in `data/data_pre_process.ipynb` to preprocess each dataset into our standardized JSON format. The datasets we utilize are categorized into two types:
 
-- **Challenging Reasoning Tasks:** 
+- **Challenging Reasoning Tasks:**
     - **PhD-level Science QA:** GPQA
     - **Math Benchmarks:** MATH500, AMC2023, AIME2024
     - **Code Benchmark:** LiveCodeBench
