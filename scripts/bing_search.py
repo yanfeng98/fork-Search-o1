@@ -253,7 +253,7 @@ def extract_pdf_text(url):
     except Exception as e:
         return f"Error: {str(e)}"
 
-def extract_relevant_info(search_results):
+def extract_relevant_info(search_results: dict[str, dict[str, list[dict[str, str]]]]) -> list[dict[str, int|str]]:
     """
     Extract relevant information from Bing search results.
 
@@ -263,7 +263,7 @@ def extract_relevant_info(search_results):
     Returns:
         list: A list of dictionaries containing the extracted information.
     """
-    useful_info = []
+    useful_info: list[dict[str, int|str]] = []
     
     if 'webPages' in search_results and 'value' in search_results['webPages']:
         for id, result in enumerate(search_results['webPages']['value']):

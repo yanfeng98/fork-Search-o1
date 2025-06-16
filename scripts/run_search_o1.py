@@ -8,7 +8,7 @@ from typing import Optional, List, Dict, Any
 import argparse
 
 from transformers import AutoTokenizer
-from vllm import LLM, SamplingParams
+from vllm import LLM, SamplingParams, RequestOutput
 
 from bing_search import (
     bing_web_search,
@@ -391,8 +391,8 @@ def main():
         max_tokens = 8192
 
     # ---------------------- Generation Function ----------------------
-    def run_generation(sequences: List[Dict], max_tokens: int) -> List:
-        prompts = [s['prompt'] for s in sequences]
+    def run_generation(sequences: List[Dict], max_tokens: int) -> List[RequestOutput]:
+        prompts: list[str] = [s['prompt'] for s in sequences]
         sampling_params = SamplingParams(
             max_tokens=max_tokens,
             temperature=temperature,
@@ -402,7 +402,7 @@ def main():
             stop=[END_SEARCH_QUERY, tokenizer.eos_token],
             include_stop_str_in_output=True,
         )
-        output_list = llm.generate(prompts, sampling_params=sampling_params)
+        output_list: list[RequestOutput] = llm.generate(prompts, sampling_params=sampling_params)
         return output_list
 
     # Function to extract text between two tags
@@ -492,38 +492,37 @@ def main():
     # Main loop until all sequences are finished or maximum turns reached
     while True:
         # Identify sequences that need generation
-        sequences_needing_generation = [seq for seq in active_sequences if not seq['finished']]
+        sequences_needing_generation: list[dict[str, Any]] = [seq for seq in active_sequences if not seq['finished']]
 
         if sequences_needing_generation:
             turn += 1
             print(f'\n-------------- Turn {turn} --------------')
             print(f"We have {len(sequences_needing_generation)} sequences needing generation...")
-            outputs = run_generation(sequences_needing_generation, max_tokens)
+            outputs: list[RequestOutput] = run_generation(sequences_needing_generation, max_tokens)
             print("Generation completed, processing outputs...")
 
             # Initialize batch variables
-            batch_relevant_info = []
-            batch_original_questions = []
-            batch_prev_reasonings = []
-            batch_search_queries = []
+            batch_relevant_info: list[list[dict[str, int|str]]] = []
+            batch_original_questions: list[str] = []
+            batch_prev_reasonings: list[str] = []
+            batch_search_queries: list[str] = []
+            batch_sequences: list[dict[str, Any]] = []
             batch_documents = []
-            batch_sequences = []
 
             # Collect URLs to fetch across all sequences
-            all_urls_to_fetch = set()
-            url_snippets = {}
-            url_sequence_map = {}  # Map URL to list of sequences needing it
+            all_urls_to_fetch: set[str] = set()
+            url_snippets: dict[str, str] = {}
 
             # Process each sequence and collect URLs
             for seq, out in zip(sequences_needing_generation, outputs):
-                text = out.outputs[0].text
+                text: str = out.outputs[0].text
                 seq['history'].append(text)
                 # Append generated text to prompt and output
                 seq['prompt'] += text
                 seq['output'] += text
 
                 # Extract search query
-                search_query = extract_between(text, BEGIN_SEARCH_QUERY, END_SEARCH_QUERY)
+                search_query: str = extract_between(text, BEGIN_SEARCH_QUERY, END_SEARCH_QUERY)
 
                 # If a search query is present and needs to be executed
                 if search_query and seq['output'].rstrip().endswith(END_SEARCH_QUERY):
@@ -543,30 +542,29 @@ def main():
                                 results = {}
 
                         # Extract relevant information from Bing search results
-                        relevant_info = extract_relevant_info(results)[:top_k]
+                        relevant_info: list[dict[str, int|str]] = extract_relevant_info(results)[:top_k]
                         seq['relevant_info'] = relevant_info
 
                         # Extract URLs and snippets
-                        urls_to_fetch = [it['url'] for it in relevant_info]
-                        snippets = {info['url']: info['snippet'] for info in relevant_info if 'snippet' in info}
+                        urls_to_fetch: list[str] = [it['url'] for it in relevant_info]
+                        snippets: dict[str, str] = {info['url']: info['snippet'] for info in relevant_info if 'snippet' in info}
 
                         # Filter URLs that are not cached
-                        urls_to_fetch_filtered = [u for u in urls_to_fetch if u not in url_cache]
-                        cached_urls = [u for u in urls_to_fetch if u in url_cache]
+                        urls_to_fetch_filtered: list[str] = [u for u in urls_to_fetch if u not in url_cache]
 
                         # Store info for all_urls_to_fetch and url_snippets
                         for url in urls_to_fetch_filtered:
                             all_urls_to_fetch.add(url)
                             url_snippets[url] = snippets.get(url, "")
 
-                        all_reasoning_steps = seq['output']
-                        all_reasoning_steps = all_reasoning_steps.replace('\n\n', '\n').split("\n")
+                        all_reasoning_steps: str = seq['output']
+                        all_reasoning_steps: list[str] = all_reasoning_steps.replace('\n\n', '\n').split("\n")
 
-                        truncated_prev_reasoning = ""
+                        truncated_prev_reasoning: str = ""
                         for i, step in enumerate(all_reasoning_steps):
                             truncated_prev_reasoning += f"Step {i + 1}: {step}\n\n"
 
-                        prev_steps = truncated_prev_reasoning.split('\n\n')
+                        prev_steps: list[str] = truncated_prev_reasoning.split('\n\n')
                         if len(prev_steps) <= 5:
                             truncated_prev_reasoning = '\n\n'.join(prev_steps)
                         else:
