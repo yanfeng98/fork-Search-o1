@@ -10,7 +10,7 @@
 ### 1. Environment Setup
 ```bash
 # Create conda environment
-conda create -n search_o1 python=3.9
+conda create -n search_o1 python=3.12
 conda activate search_o1
 
 # Install requirements

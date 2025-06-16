@@ -24,7 +24,7 @@ keys_to_keep: list[str] = [
     'Incorrect Answer 3'
 ]
 
-filtered_data: list[dict[str, int| str]] = []
+filtered_data: list[dict[str, int|str]] = []
 with open(data_path, mode='r', encoding='utf-8') as csv_file:
     csv_reader = csv.DictReader(csv_file)
     for idx, row in enumerate(tqdm(csv_reader), 0):
