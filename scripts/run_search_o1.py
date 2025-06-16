@@ -4,8 +4,7 @@ import json
 import time
 import re
 import torch
-import string
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, List, Dict, Any
 import argparse
 
 from transformers import AutoTokenizer
@@ -35,10 +34,10 @@ from prompts import (
 )
 
 # Define special tokens
-BEGIN_SEARCH_QUERY = "<|begin_search_query|>"
-END_SEARCH_QUERY = "<|end_search_query|>"
-BEGIN_SEARCH_RESULT = "<|begin_search_result|>"
-END_SEARCH_RESULT = "<|end_search_result|>"
+BEGIN_SEARCH_QUERY: str = "<|begin_search_query|>"
+END_SEARCH_QUERY: str = "<|end_search_query|>"
+BEGIN_SEARCH_RESULT: str = "<|begin_search_result|>"
+END_SEARCH_RESULT: str = "<|end_search_result|>"
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run Search O1 for various datasets and models.")
@@ -175,23 +174,23 @@ def main():
     args = parse_args()
 
     # Extract arguments
-    dataset_name = args.dataset_name
-    split = args.split
-    subset_num = args.subset_num
-    MAX_SEARCH_LIMIT = args.max_search_limit
-    MAX_TURN = args.max_turn
-    top_k = args.top_k
-    max_doc_len = args.max_doc_len
-    model_path = args.model_path
-    temperature = args.temperature
-    top_p = args.top_p
-    top_k_sampling = args.top_k_sampling
-    repetition_penalty = args.repetition_penalty
-    max_tokens = args.max_tokens
-    bing_subscription_key = args.bing_subscription_key
-    bing_endpoint = args.bing_endpoint
-    use_jina = args.use_jina
-    jina_api_key = args.jina_api_key
+    dataset_name: str = args.dataset_name
+    split: str = args.split
+    subset_num: int = args.subset_num
+    MAX_SEARCH_LIMIT: int = args.max_search_limit
+    MAX_TURN: int = args.max_turn
+    top_k: int = args.top_k
+    max_doc_len: int = args.max_doc_len
+    model_path: str = args.model_path
+    temperature: float = args.temperature
+    top_p: float = args.top_p
+    top_k_sampling: int = args.top_k_sampling
+    repetition_penalty: float = args.repetition_penalty
+    max_tokens: int = args.max_tokens
+    bing_subscription_key: str = args.bing_subscription_key
+    bing_endpoint: str = args.bing_endpoint
+    use_jina: bool = args.use_jina
+    jina_api_key: str = args.jina_api_key
 
     # Adjust parameters based on dataset
     if dataset_name in ['nq', 'triviaqa', 'hotpotqa', 'musique', 'bamboogle', '2wiki', 'medmcqa', 'pubhealth']:
@@ -211,11 +210,11 @@ def main():
 
     # Data paths based on dataset
     if dataset_name == 'livecode':
-        data_path = f'./data/LiveCodeBench/{split}.json'
+        data_path: str = f'./data/LiveCodeBench/{split}.json'
     elif dataset_name in ['math500', 'gpqa', 'aime', 'amc']:
-        data_path = f'./data/{dataset_name.upper()}/{split}.json'
+        data_path: str = f'./data/{dataset_name.upper()}/{split}.json'
     else:
-        data_path = f'./data/QA_Datasets/{dataset_name}.json'
+        data_path: str = f'./data/QA_Datasets/{dataset_name}.json'
 
     print('-----------------------')
     print(f'Using {dataset_name} {split} set.')
@@ -223,9 +222,9 @@ def main():
 
     # ---------------------- Caching Mechanism ----------------------
     # Define cache directories and file paths
-    cache_dir = './cache'
-    search_cache_path = os.path.join(cache_dir, 'search_cache.json')
-    url_cache_path = os.path.join(cache_dir, 'url_cache.json')
+    cache_dir: str = './cache'
+    search_cache_path: str = os.path.join(cache_dir, 'search_cache.json')
+    url_cache_path: str = os.path.join(cache_dir, 'url_cache.json')
 
     # Ensure cache directory exists
     os.makedirs(cache_dir, exist_ok=True)
@@ -251,7 +250,7 @@ def main():
             json.dump(url_cache, f, ensure_ascii=False, indent=2)
 
     # ---------------------- Model Loading ----------------------
-    tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+    tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = 'left'
@@ -259,18 +258,18 @@ def main():
     # Define output directory based on model and dataset
     if 'qwq' in model_path.lower():
         if dataset_name in ['math500', 'gpqa', 'aime', 'amc', 'livecode']:
-            output_dir = f'./outputs/{dataset_name}.qwq.search_o1'
+            output_dir: str = f'./outputs/{dataset_name}.qwq.search_o1'
             if dataset_name == 'gpqa' and (MAX_SEARCH_LIMIT != 5 or top_k != 10):
-                output_dir = f'./outputs/runs.analysis/{dataset_name}.qwq.search_o1.{MAX_SEARCH_LIMIT}.{top_k}'
+                output_dir: str = f'./outputs/runs.analysis/{dataset_name}.qwq.search_o1.{MAX_SEARCH_LIMIT}.{top_k}'
         else:
-            output_dir = f'./outputs/runs.qa/{dataset_name}.qwq.search_o1'
+            output_dir: str = f'./outputs/runs.qa/{dataset_name}.qwq.search_o1'
     else:
-        model_short_name = model_path.split('/')[-1].lower().replace('-instruct', '')
-        output_dir = f'./outputs/runs.baselines/{dataset_name}.{model_short_name}.search_o1'
+        model_short_name: str = model_path.split('/')[-1].lower().replace('-instruct', '')
+        output_dir: str = f'./outputs/runs.baselines/{dataset_name}.{model_short_name}.search_o1'
     os.makedirs(output_dir, exist_ok=True)
 
     # Initialize the LLM
-    llm = LLM(
+    llm: LLM = LLM(
         model=model_path,
         tensor_parallel_size=torch.cuda.device_count(),
         gpu_memory_utilization=0.95,
@@ -278,7 +277,7 @@ def main():
 
     # ---------------------- Data Loading ----------------------
     with open(data_path, 'r', encoding='utf-8') as json_file:
-        filtered_data = json.load(json_file)
+        filtered_data: list[dict[str, int|str]] = json.load(json_file)
 
     # ---------------------- Batch Generation Function ----------------------
     def generate_webpage_to_reasonchain_batch(
@@ -323,9 +322,9 @@ def main():
         return extracted_infos
 
     # ---------------------- Preparation of Input Prompts ----------------------
-    input_list = []
+    input_list: list[str] = []
     for item in filtered_data:
-        question = item['Question']
+        question: str = item['Question']
 
         if dataset_name in ['nq', 'triviaqa', 'hotpotqa', 'musique', 'bamboogle', '2wiki']:
             if dataset_name in ['nq', 'triviaqa']:
@@ -345,13 +344,13 @@ def main():
                 user_prompt = get_task_instruction_math(question)
 
         elif dataset_name == 'gpqa':
-            instruction = get_gpqa_search_o1_instruction(MAX_SEARCH_LIMIT)
+            instruction: str = get_gpqa_search_o1_instruction(MAX_SEARCH_LIMIT)
             if 'qwq' in model_path.lower():
-                user_prompt = get_task_instruction_multi_choice(question, model_name='qwq')
+                user_prompt: str = get_task_instruction_multi_choice(question, model_name='qwq')
             elif 'llama' in model_path.lower():
-                user_prompt = get_task_instruction_multi_choice(question, model_name='llama')
+                user_prompt: str = get_task_instruction_multi_choice(question, model_name='llama')
             else:
-                user_prompt = get_task_instruction_multi_choice(question)
+                user_prompt: str = get_task_instruction_multi_choice(question)
 
         elif dataset_name == 'livecode':
             instruction = get_code_search_o1_instruction(MAX_SEARCH_LIMIT)
@@ -363,8 +362,8 @@ def main():
         else:
             user_prompt = ""  # Default to empty if dataset not matched
 
-        prompt = [{"role": "user", "content": instruction + user_prompt}]
-        prompt = tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
+        prompt: list[dict[str, str]] = [{"role": "user", "content": instruction + user_prompt}]
+        prompt: str = tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
         input_list.append(prompt)
 
     if subset_num != -1:
@@ -372,7 +371,7 @@ def main():
         filtered_data = filtered_data[:subset_num]
 
     # Initialize active sequences
-    active_sequences = [{
+    active_sequences: list[dict[str, Any]] = [{
         'item': item,
         'prompt': prompt,
         'output': '',

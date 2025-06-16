@@ -1,6 +1,6 @@
 
 
-def get_gpqa_search_o1_instruction(MAX_SEARCH_LIMIT):
+def get_gpqa_search_o1_instruction(MAX_SEARCH_LIMIT: int) -> str:
     return (
         "You are a reasoning assistant with the ability to perform web searches to help "
         "you answer the user's question accurately. You have special tools:\n\n"
