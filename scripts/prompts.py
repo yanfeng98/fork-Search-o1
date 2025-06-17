@@ -66,7 +66,7 @@ def get_code_search_o1_instruction(MAX_SEARCH_LIMIT):
     )
 
 
-def get_webpage_to_reasonchain_instruction(prev_reasoning, search_query, document):
+def get_webpage_to_reasonchain_instruction(prev_reasoning: str, search_query: str, document: str) -> str:
     return f"""**Task Instruction:**
 
 You are tasked with reading and analyzing web pages based on the following inputs: **Previous Reasoning Steps**, **Current Search Query**, and **Searched Web Pages**. Your objective is to extract relevant and helpful information for **Current Search Query** from the **Searched Web Pages** and seamlessly integrate this information into the **Previous Reasoning Steps** to continue reasoning for the original question.

@@ -281,24 +281,21 @@ def main():
 
     # ---------------------- Batch Generation Function ----------------------
     def generate_webpage_to_reasonchain_batch(
-        original_questions: List[str],
         prev_reasonings: List[str],
         search_queries: List[str],
         documents: List[str],
-        dataset_name: str,
-        batch_output_records: List[Dict],  # New parameter to collect outputs
+        batch_output_records: List[Dict],
         max_tokens: int = 32768,
-        coherent: bool = False,
     ) -> List[str]:
-        user_prompts = [
+        user_prompts: list[str] = [
             get_webpage_to_reasonchain_instruction(r, sq, doc)
             for r, sq, doc in zip(prev_reasonings, search_queries, documents)
         ]
 
-        prompts = [{"role": "user", "content": up} for up in user_prompts]
-        prompts = [tokenizer.apply_chat_template([p], tokenize=False, add_generation_prompt=True) for p in prompts]
+        prompts: list[dict[str, str]] = [{"role": "user", "content": up} for up in user_prompts]
+        prompts: list[str] = [tokenizer.apply_chat_template([p], tokenize=False, add_generation_prompt=True) for p in prompts]
 
-        output = llm.generate(
+        output: list[RequestOutput] = llm.generate(
             prompts,
             sampling_params=SamplingParams(
                 max_tokens=max_tokens,
@@ -309,8 +306,8 @@ def main():
             )
         )
 
-        raw_outputs = [out.outputs[0].text for out in output]
-        extracted_infos = [extract_answer(raw, mode='infogen') for raw in raw_outputs]
+        raw_outputs: list[str] = [out.outputs[0].text for out in output]
+        extracted_infos: list[str] = [extract_answer(raw, mode='infogen') for raw in raw_outputs]
 
         for i, (p, r, e) in enumerate(zip(prompts, raw_outputs, extracted_infos)):
             batch_output_records.append({
@@ -507,7 +504,7 @@ def main():
             batch_prev_reasonings: list[str] = []
             batch_search_queries: list[str] = []
             batch_sequences: list[dict[str, Any]] = []
-            batch_documents = []
+            batch_documents: list[str] = []
 
             # Collect URLs to fetch across all sequences
             all_urls_to_fetch: set[str] = set()
@@ -611,32 +608,31 @@ def main():
             if all_urls_to_fetch:
                 print(f"Fetching {len(all_urls_to_fetch)} URLs...")
                 try:
-                    fetched_contents = fetch_page_content(
+                    fetched_contents: dict[str, str] = fetch_page_content(
                         list(all_urls_to_fetch),
                         use_jina=use_jina,
                         jina_api_key=jina_api_key,
-                        # snippets=url_snippets  # Do not pass snippets when updating url_cache directly
                     )
                     print(f"Fetched {len(fetched_contents)} URLs successfully.")
                 except Exception as e:
                     print(f"Error during batch URL fetching: {e}")
-                    fetched_contents = {url: f"Error fetching URL: {e}" for url in all_urls_to_fetch}
+                    fetched_contents: dict[str, str] = {url: f"Error fetching URL: {e}" for url in all_urls_to_fetch}
                 # Update cache with fetched contents
                 for url, content in fetched_contents.items():
                     url_cache[url] = content
 
             # After fetching, prepare formatted documents for batch processing
             for relevant_info in batch_relevant_info:
-                formatted_documents = ""
+                formatted_documents: str = ""
                 for i, doc_info in enumerate(relevant_info):
-                    url = doc_info['url']
-                    raw_context = url_cache.get(url, "")
+                    url: str = doc_info['url']
+                    raw_context: str = url_cache.get(url, "")
                     doc_info['snippet'] = doc_info['snippet'].replace('<b>','').replace('</b>','')
                     success, filtered_context = extract_snippet_with_context(raw_context, doc_info['snippet'], context_chars=max_doc_len)
                     if success:
-                        context = filtered_context
+                        context: str = filtered_context
                     else:
-                        context = raw_context[:max_doc_len*2]
+                        context: str = raw_context[:max_doc_len*2]
 
                     doc_info['context'] = context
                     formatted_documents += f"**Web Page {i + 1}:**\n"
@@ -647,12 +643,10 @@ def main():
             # After fetching, prepare for batch processing if there are any
             if batch_sequences:
                 print(f"Batch processing {len(batch_sequences)} sequences with generate_webpage_to_reasonchain_batch...")
-                webpage_analyses = generate_webpage_to_reasonchain_batch(
-                    original_questions=batch_original_questions,
+                webpage_analyses: list[str] = generate_webpage_to_reasonchain_batch(
                     prev_reasonings=batch_prev_reasonings,
                     search_queries=batch_search_queries,
                     documents=batch_documents,
-                    dataset_name=dataset_name,
                     batch_output_records=batch_output_records,  # Pass the collection list
                     max_tokens=max_tokens,
                 )
@@ -679,7 +673,7 @@ def main():
                 print(f"Maximum number of turns ({MAX_TURN}) reached, stopping.")
                 break
 
-    total_time = time.time() - start_time
+    total_time: float = time.time() - start_time
 
     # ---------------------- Save Batch Output Records to JSON File ----------------------
     # Define output JSON file path
@@ -693,7 +687,7 @@ def main():
     print(f"Batch outputs saved to {batch_output_file}")
 
     # Prepare output list for evaluation
-    output_list = [seq['output'] for seq in active_sequences]
+    output_list: list[str] = [seq['output'] for seq in active_sequences]
 
     # Run evaluation
     run_evaluation(filtered_data, input_list, output_list, dataset_name, output_dir, total_time, split)

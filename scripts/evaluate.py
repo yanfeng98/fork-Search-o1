@@ -10,7 +10,7 @@ from lcb_runner.evaluation import codegen_metrics
 from utils.math_equivalence import is_equiv
 
 
-def extract_answer(output, mode='gen'):
+def extract_answer(output: str, mode: str = 'gen') -> str:
     extracted_text: str = ''
     if mode == 'codegen':
         # Extract the code between ```python and ```
@@ -20,14 +20,14 @@ def extract_answer(output, mode='gen'):
             extracted_text = matches[-1].strip()  # Take the last match
     elif mode == 'infogen':
         # Extract content after **Final Information** or **Modified Reasoning Steps**
-        pattern_info = "\n**Final Information**"
-        pattern_step = "\n**Modified Reasoning Steps**"
+        pattern_info: str = "\n**Final Information**"
+        pattern_step: str = "\n**Modified Reasoning Steps**"
         if pattern_info in output:
-            extracted_text = output.split(pattern_info)[-1].replace("\n","").strip("```").strip()
+            extracted_text: str = output.split(pattern_info)[-1].replace("\n","").strip("```").strip()
         elif pattern_step in output:
-            extracted_text = output.split(pattern_step)[-1].strip("```").strip()
+            extracted_text: str = output.split(pattern_step)[-1].strip("```").strip()
         else:
-            extracted_text = "No helpful information found."
+            extracted_text: str = "No helpful information found."
     else:
         # Existing extraction logic for 'gen' and 'choose' modes
         pattern = r'\\boxed\{(.*)\}'

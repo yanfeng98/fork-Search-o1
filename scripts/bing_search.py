@@ -37,13 +37,13 @@ def remove_punctuation(text: str) -> str:
     """Remove punctuation from the text."""
     return text.translate(str.maketrans("", "", string.punctuation))
 
-def f1_score(true_set: set, pred_set: set) -> float:
+def f1_score(true_set: set[str], pred_set: set[str]) -> float:
     """Calculate the F1 score between two sets of words."""
-    intersection = len(true_set.intersection(pred_set))
+    intersection: int = len(true_set.intersection(pred_set))
     if not intersection:
         return 0.0
-    precision = intersection / float(len(pred_set))
-    recall = intersection / float(len(true_set))
+    precision: float = intersection / float(len(pred_set))
+    recall: float = intersection / float(len(true_set))
     return 2 * (precision * recall) / (precision + recall)
 
 def extract_snippet_with_context(full_text: str, snippet: str, context_chars: int = 2500) -> Tuple[bool, str]:
@@ -62,30 +62,29 @@ def extract_snippet_with_context(full_text: str, snippet: str, context_chars: in
         full_text = full_text[:50000]
 
         snippet = snippet.lower()
-        snippet = remove_punctuation(snippet)
-        snippet_words = set(snippet.split())
+        snippet: str = remove_punctuation(snippet)
+        snippet_words: set[str] = set(snippet.split())
 
         best_sentence = None
-        best_f1 = 0.2
+        best_f1: str = 0.2
 
-        # sentences = re.split(r'(?<=[.!?]) +', full_text)  # Split sentences using regex, supporting ., !, ? endings
-        sentences = sent_tokenize(full_text)  # Split sentences using nltk's sent_tokenize
+        sentences: list[str] = sent_tokenize(full_text)
 
         for sentence in sentences:
-            key_sentence = sentence.lower()
+            key_sentence: str = sentence.lower()
             key_sentence = remove_punctuation(key_sentence)
-            sentence_words = set(key_sentence.split())
-            f1 = f1_score(snippet_words, sentence_words)
+            sentence_words: list[str] = set(key_sentence.split())
+            f1: float = f1_score(snippet_words, sentence_words)
             if f1 > best_f1:
-                best_f1 = f1
-                best_sentence = sentence
+                best_f1: float = f1
+                best_sentence: str = sentence
 
         if best_sentence:
-            para_start = full_text.find(best_sentence)
-            para_end = para_start + len(best_sentence)
-            start_index = max(0, para_start - context_chars)
-            end_index = min(len(full_text), para_end + context_chars)
-            context = full_text[start_index:end_index]
+            para_start: int = full_text.find(best_sentence)
+            para_end: int = para_start + len(best_sentence)
+            start_index: int = max(0, para_start - context_chars)
+            end_index: int = min(len(full_text), para_end + context_chars)
+            context: str = full_text[start_index:end_index]
             return True, context
         else:
             # If no matching sentence is found, return the first context_chars*2 characters of the full text
@@ -93,7 +92,7 @@ def extract_snippet_with_context(full_text: str, snippet: str, context_chars: in
     except Exception as e:
         return False, f"Failed to extract snippet context due to {str(e)}"
 
-def extract_text_from_url(url, use_jina=False, jina_api_key=None, snippet: Optional[str] = None):
+def extract_text_from_url(url: str, use_jina: bool = False, jina_api_key: str = None, snippet: Optional[str] = None):
     """
     Extract text from a URL. If a snippet is provided, extract the context related to it.
 
@@ -107,24 +106,20 @@ def extract_text_from_url(url, use_jina=False, jina_api_key=None, snippet: Optio
     """
     try:
         if use_jina:
-            jina_headers = {
+            jina_headers: dict[str, str] = {
                 'Authorization': f'Bearer {jina_api_key}',
                 'X-Return-Format': 'markdown',
-                # 'X-With-Links-Summary': 'true'
             }
             response = requests.get(f'https://r.jina.ai/{url}', headers=jina_headers).text
             # Remove URLs
             pattern = r"\(https?:.*?\)|\[https?:.*?\]"
             text = re.sub(pattern, "", response).replace('---','-').replace('===','=').replace('   ',' ').replace('   ',' ')
         else:
-            response = session.get(url, timeout=20)  # Set timeout to 20 seconds
-            response.raise_for_status()  # Raise HTTPError if the request failed
-            # Determine the content type
+            response = session.get(url, timeout=20)
+            response.raise_for_status()
             content_type = response.headers.get('Content-Type', '')
             if 'pdf' in content_type:
-                # If it's a PDF file, extract PDF text
                 return extract_pdf_text(url)
-            # Try using lxml parser, fallback to html.parser if unavailable
             try:
                 soup = BeautifulSoup(response.text, 'lxml')
             except Exception:
@@ -150,7 +145,7 @@ def extract_text_from_url(url, use_jina=False, jina_api_key=None, snippet: Optio
     except Exception as e:
         return f"Unexpected error: {str(e)}"
 
-def fetch_page_content(urls, max_workers=32, use_jina=False, jina_api_key=None, snippets: Optional[dict] = None):
+def fetch_page_content(urls, max_workers=32, use_jina=False, jina_api_key=None, snippets: Optional[dict] = None) -> dict[str, str]:
     """
     Concurrently fetch content from multiple URLs.
 
@@ -163,7 +158,7 @@ def fetch_page_content(urls, max_workers=32, use_jina=False, jina_api_key=None, 
     Returns:
         dict: A dictionary mapping URLs to the extracted content or context.
     """
-    results = {}
+    results: dict[str, str] = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Use tqdm to display a progress bar
         futures = {
@@ -171,13 +166,13 @@ def fetch_page_content(urls, max_workers=32, use_jina=False, jina_api_key=None, 
             for url in urls
         }
         for future in tqdm(concurrent.futures.as_completed(futures), desc="Fetching URLs", total=len(urls)):
-            url = futures[future]
+            url: str = futures[future]
             try:
-                data = future.result()
+                data: str = future.result()
                 results[url] = data
             except Exception as exc:
                 results[url] = f"Error fetching {url}: {exc}"
-            time.sleep(0.2)  # Simple rate limiting
+            time.sleep(0.2)
     return results
 
 
@@ -222,7 +217,7 @@ def bing_web_search(query, subscription_key, endpoint, market='en-US', language=
         return {}
 
 
-def extract_pdf_text(url):
+def extract_pdf_text(url: str):
     """
     Extract text from a PDF.
 
@@ -236,15 +231,15 @@ def extract_pdf_text(url):
         response = session.get(url, timeout=20)  # Set timeout to 20 seconds
         if response.status_code != 200:
             return f"Error: Unable to retrieve the PDF (status code {response.status_code})"
-        
+
         # Open the PDF file using pdfplumber
         with pdfplumber.open(BytesIO(response.content)) as pdf:
-            full_text = ""
+            full_text: str = ""
             for page in pdf.pages:
                 text = page.extract_text()
                 if text:
                     full_text += text
-        
+
         # Limit the text length
         cleaned_text = ' '.join(full_text.split()[:600])
         return cleaned_text
@@ -264,7 +259,7 @@ def extract_relevant_info(search_results: dict[str, dict[str, list[dict[str, str
         list: A list of dictionaries containing the extracted information.
     """
     useful_info: list[dict[str, int|str]] = []
-    
+
     if 'webPages' in search_results and 'value' in search_results['webPages']:
         for id, result in enumerate(search_results['webPages']['value']):
             info = {
@@ -278,7 +273,7 @@ def extract_relevant_info(search_results: dict[str, dict[str, list[dict[str, str
                 'context': ''  # Reserved field to be filled later
             }
             useful_info.append(info)
-    
+
     return useful_info
 
 
@@ -288,18 +283,18 @@ if __name__ == "__main__":
     # Example usage
     # Define the query to search
     query = "Structure of dimethyl fumarate"
-    
+
     # Subscription key and endpoint for Bing Search API
     BING_SUBSCRIPTION_KEY = "YOUR_BING_SUBSCRIPTION_KEY"
     if not BING_SUBSCRIPTION_KEY:
         raise ValueError("Please set the BING_SEARCH_V7_SUBSCRIPTION_KEY environment variable.")
-    
+
     bing_endpoint = "https://api.bing.microsoft.com/v7.0/search"
-    
+
     # Perform the search
     print("Performing Bing Web Search...")
     search_results = bing_web_search(query, BING_SUBSCRIPTION_KEY, bing_endpoint)
-    
+
     print("Extracting relevant information from search results...")
     extracted_info = extract_relevant_info(search_results)
 
