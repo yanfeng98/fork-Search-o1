@@ -1,11 +1,11 @@
 # run_search_o1.py
 import os
+import re
 import json
 import time
-import re
 import torch
-from typing import Optional, List, Dict, Any
 import argparse
+from typing import Optional, List, Dict, Any
 
 from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams, RequestOutput
@@ -242,13 +242,6 @@ def main():
     else:
         url_cache = {}
 
-    # Function to save caches
-    def save_caches():
-        with open(search_cache_path, 'w', encoding='utf-8') as f:
-            json.dump(search_cache, f, ensure_ascii=False, indent=2)
-        with open(url_cache_path, 'w', encoding='utf-8') as f:
-            json.dump(url_cache, f, ensure_ascii=False, indent=2)
-
     # ---------------------- Model Loading ----------------------
     tokenizer: AutoTokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     if tokenizer.pad_token is None:
@@ -278,45 +271,6 @@ def main():
     # ---------------------- Data Loading ----------------------
     with open(data_path, 'r', encoding='utf-8') as json_file:
         filtered_data: list[dict[str, int|str]] = json.load(json_file)
-
-    # ---------------------- Batch Generation Function ----------------------
-    def generate_webpage_to_reasonchain_batch(
-        prev_reasonings: List[str],
-        search_queries: List[str],
-        documents: List[str],
-        batch_output_records: List[Dict],
-        max_tokens: int = 32768,
-    ) -> List[str]:
-        user_prompts: list[str] = [
-            get_webpage_to_reasonchain_instruction(r, sq, doc)
-            for r, sq, doc in zip(prev_reasonings, search_queries, documents)
-        ]
-
-        prompts: list[dict[str, str]] = [{"role": "user", "content": up} for up in user_prompts]
-        prompts: list[str] = [tokenizer.apply_chat_template([p], tokenize=False, add_generation_prompt=True) for p in prompts]
-
-        output: list[RequestOutput] = llm.generate(
-            prompts,
-            sampling_params=SamplingParams(
-                max_tokens=max_tokens,
-                temperature=0.7,
-                top_p=0.8,
-                top_k=20,
-                repetition_penalty=1.05,
-            )
-        )
-
-        raw_outputs: list[str] = [out.outputs[0].text for out in output]
-        extracted_infos: list[str] = [extract_answer(raw, mode='infogen') for raw in raw_outputs]
-
-        for i, (p, r, e) in enumerate(zip(prompts, raw_outputs, extracted_infos)):
-            batch_output_records.append({
-                'prompt': p,
-                'raw_output': r,
-                'extracted_info': e
-            })
-
-        return extracted_infos
 
     # ---------------------- Preparation of Input Prompts ----------------------
     input_list: list[str] = []
@@ -410,6 +364,45 @@ def main():
             return matches[-1].strip()
         return None
 
+    # ---------------------- Batch Generation Function ----------------------
+    def generate_webpage_to_reasonchain_batch(
+        prev_reasonings: List[str],
+        search_queries: List[str],
+        documents: List[str],
+        batch_output_records: List[Dict],
+        max_tokens: int = 32768,
+    ) -> List[str]:
+        user_prompts: list[str] = [
+            get_webpage_to_reasonchain_instruction(r, sq, doc)
+            for r, sq, doc in zip(prev_reasonings, search_queries, documents)
+        ]
+
+        prompts: list[dict[str, str]] = [{"role": "user", "content": up} for up in user_prompts]
+        prompts: list[str] = [tokenizer.apply_chat_template([p], tokenize=False, add_generation_prompt=True) for p in prompts]
+
+        output: list[RequestOutput] = llm.generate(
+            prompts,
+            sampling_params=SamplingParams(
+                max_tokens=max_tokens,
+                temperature=0.7,
+                top_p=0.8,
+                top_k=20,
+                repetition_penalty=1.05,
+            )
+        )
+
+        raw_outputs: list[str] = [out.outputs[0].text for out in output]
+        extracted_infos: list[str] = [extract_answer(raw, mode='infogen') for raw in raw_outputs]
+
+        for i, (p, r, e) in enumerate(zip(prompts, raw_outputs, extracted_infos)):
+            batch_output_records.append({
+                'prompt': p,
+                'raw_output': r,
+                'extracted_info': e
+            })
+
+        return extracted_infos
+
     def replace_recent_steps(origin_str, replace_str):
         """
         Replaces specific steps in the original reasoning steps with new steps.
@@ -479,12 +472,19 @@ def main():
 
         return new_reasoning_steps
 
+    # Function to save caches
+    def save_caches():
+        with open(search_cache_path, 'w', encoding='utf-8') as f:
+            json.dump(search_cache, f, ensure_ascii=False, indent=2)
+        with open(url_cache_path, 'w', encoding='utf-8') as f:
+            json.dump(url_cache, f, ensure_ascii=False, indent=2)
+
     # ---------------------- Initialize Collection Structure ----------------------
     # Initialize a list to collect batch outputs
-    batch_output_records = []
+    batch_output_records: list[dict[str, str]] = []
 
     start_time = time.time()
-    turn = 0
+    turn: int = 0
 
     # Main loop until all sequences are finished or maximum turns reached
     while True:
